@@ -18,20 +18,29 @@ def index():
 # Rout to return all tasks 
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
+    # Construct a select statement to select all tasks
     select_stmt = db.select(Task)
 
+    # Check if there is a search query parameter
     search = request.args.get('search')
     if search:
+        # Modify the select statement to filter tasks by title
         select_stmt = select_stmt.where(Task.title.ilike(f"%{search}%"))
 
     completed = request.args.get('completed')
     if completed:
+        # Convert the completed parameter to a boolean
         completed = completed.lower() == 'true'
+        # Modify the select statement to filter tasks by completion status
         select_stmt = select_stmt.where(Task.complete == completed)
+
+    # Execute the select statement
     tasks = db.session.execute(select_stmt)
 
+    # Extract individual rows and convert each task to a dictionary
     task_dicts = [task.to_dict() for task in tasks.scalars().all()]
 
+    # Return the list of task dictionaries
     return task_dicts
 
 # Rout to return task by id
