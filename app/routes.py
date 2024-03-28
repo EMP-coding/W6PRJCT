@@ -1,6 +1,8 @@
 from flask import request, render_template
-from app import app 
+from app import app, db 
 from task_data.tasks import tasks_list 
+from app.models import Task 
+
 
 import datetime 
 current_time = datetime.datetime.now()
@@ -14,20 +16,33 @@ def index():
 
 
 # Rout to return all tasks 
-@app.route('/tasks')
+@app.route('/tasks', methods=['GET'])
 def get_tasks():
-    tasks = tasks_list 
-    return tasks 
+    select_stmt = db.select(Task)
+
+    search = request.args.get('search')
+    if search:
+        select_stmt = select_stmt.where(Task.title.ilike(f"%{search}%"))
+
+    completed = request.args.get('completed')
+    if completed:
+        completed = completed.lower() == 'true'
+        select_stmt = select_stmt.where(Task.complete == completed)
+    tasks = db.session.execute(select_stmt)
+
+    task_dicts = [task.to_dict() for task in tasks.scalars().all()]
+
+    return task_dicts
 
 # Rout to return task by id
 
 @app.route('/tasks/<int:task_id>')
 def get_task(task_id):
-    tasks = tasks_list
-    for task in tasks:
-        if task['id'] == task_id:
-            return task
-    return  {'error': f"A Task with the ID of {task_id} does not exist."}, 404
+    task = db.session.get(Task, task_id)
+    if task:
+        return task.to_dict()
+    else:
+        return {'error': f"A Task with the ID of {task_id} does not exist."}, 404
 
 # Create Task 
 
@@ -49,16 +64,29 @@ def create_task():
     description = data.get('description')
     dueDate = data.get('dueDate')
 
-    new_task = {
-        'id': len(tasks_list) + 1,
-        'title': title,
-        'description': description,
-        'completed': False,
-        'dueDate': dueDate,
-        'createdAt': formatted_time,
-    }
+    new_task = Task(title=title, description=description, due_date=dueDate)
+    db.session.add(new_task)
+    db.session.commit()
 
-    #Needs to be a DB today
-    tasks_list.append(new_task)
+    return new_task.to_dict(), 201
 
-    return new_task, 201
+
+# Route to mark task complete
+
+
+@app.route('/tasks/<int:task_id>/complete', methods=['PUT'])
+def complete_task(task_id):
+    
+    if not request.is_json:
+        return {'error': 'Content-Type must be application/json'}, 400
+    
+    task = db.session.get(Task, task_id)
+    
+    if task is None:
+        return {'error': f'Task with ID {task_id} not found'}, 404
+    
+    task.complete = True
+    
+    db.session.commit()
+    
+    return task.to_dict(), 200

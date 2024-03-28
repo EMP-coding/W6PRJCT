@@ -9,3 +9,14 @@ class Task(db.Model):
     complete = db.Column(db.Boolean, nullable=False, default=False)
     created_at =db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     due_date = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'complete': self.complete,
+            'due_date': self.due_date.strftime('%Y-%m-%d %H:%M:%S') if self.due_date else None,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            # Add other fields as needed
+        }
