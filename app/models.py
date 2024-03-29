@@ -14,10 +14,14 @@ class Task(db.Model):
         super().__init__(**kwargs)
         self.save()
         
+    def __repr__(self):
+        return f"<Task {self.id}: {self.title}>"
+    
     def save(self):
         db.session.add(self)
         db.session.commit()
 
+    
 
     def to_dict(self):
         return {

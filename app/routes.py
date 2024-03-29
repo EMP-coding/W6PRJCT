@@ -1,6 +1,5 @@
 from flask import request, render_template
 from app import app, db 
-from task_data.tasks import tasks_list 
 from app.models import Task 
 
 
@@ -98,4 +97,5 @@ def complete_task(task_id):
     
     db.session.commit()
     
-    return task.to_dict(), 200
+    return task.to_dict(), 200 
+
