@@ -1,11 +1,50 @@
 from flask import request, render_template
 from app import app, db 
-from app.models import Task 
+from app.models import Task, User
 
 
 import datetime 
 current_time = datetime.datetime.now()
 formatted_time = current_time.strftime('%Y-%m-%dT%H:%M:%S')
+
+# User Routes
+
+@app.route('/users', methods=['POST'])
+def create_user():
+    if not request.is_json: 
+        return {'error': 'Your content type must be application/json'}, 400
+    data = request.json
+    required_fields = ['firstName', 'lastName', 'username', 'email', 'password']
+    missing_fields = []
+    for field in required_fields:
+        if field not in data:
+            missing_fields.append(field)
+    if missing_fields:
+        return {'error': f"{','.join(missing_fields)} must be in the request body"}, 400
+    
+    first_name = data.get('firstName')
+    last_name = data.get('lastName')
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    check_users = db.session.execute(db.select(User).where( (User.username == username) | (User.email == email) )).scalars().all()
+    if check_users:
+        return {'error': "A user with that username and/or email already exists"}, 400
+    
+    new_user = User(first_name=first_name, last_name=last_name,  username=username, email=email, password=password)
+
+    return new_user.to_dict(), 201
+    
+
+
+
+
+
+
+
+
+
 
 # Task Routes
 @app.route('/')
