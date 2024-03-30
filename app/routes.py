@@ -40,7 +40,7 @@ def get_tasks():
     task_dicts = [task.to_dict() for task in tasks.scalars().all()]
 
     # Return the list of task dictionaries
-    return task_dicts
+    return render_template('tasks.html', tasks=task_dicts)
 
 # Rout to return task by id
 
