@@ -15,6 +15,7 @@ def create_user():
         return {'error': 'Your content type must be application/json'}, 400
     data = request.json
     required_fields = ['firstName', 'lastName', 'username', 'email', 'password']
+    
     missing_fields = []
     for field in required_fields:
         if field not in data:
@@ -37,14 +38,32 @@ def create_user():
     return new_user.to_dict(), 201
     
 
+@app.route('/create_user', methods=['POST'])
+def create_user_from_form():
+    # Retrieve form data from request
+    if not request.form:
+        return {'error': 'Your submission must be of form type'}, 400
+    data = request.form
+    required_fields = ['firstName', 'username', 'email', 'password']
+    missing_fields = []
+    for field in required_fields:
+        if field not in data:
+            missing_fields.append(field)
+    if missing_fields:
+        return {'error': f"{','.join(missing_fields)} cannot be left empty"}, 400
+    
+    first_name = request.form.get('firstName')
+    last_name = request.form.get('lastName')
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    check_users = db.session.execute(db.select(User).where( (User.username == username) | (User.email == email) )).scalars().all()
+    if check_users:
+        return {'error': "A user with that username and/or email already exists"}, 400
+    
+    new_user = User(first_name=first_name, last_name=last_name,  username=username, email=email, password=password)
 
-
-
-
-
-
-
-
+    return new_user.to_dict(), 201
 
 # Task Routes
 @app.route('/')

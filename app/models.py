@@ -1,6 +1,6 @@
 from . import db 
 from datetime import datetime, timezone
-
+from werkzeug.security import generate_password_hash, check_password_hash
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(16), nullable=False, unique=True)
@@ -12,7 +12,16 @@ class User(db.Model):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.set_password(kwargs.get('password', ''))
+        
+
+    def set_password(self, plaintext_password):
+        self.password = generate_password_hash(plaintext_password)
         self.save()
+
+    def check_password(self, plaintext_password):
+        return check_password_hash(self.password, plaintext_password)
+
 
     def to_dict(self):
         return {
@@ -24,7 +33,7 @@ class User(db.Model):
             "dateCreated": self.date_created
         }    
     def __repr__(self):
-        return f"<User {self.id}: {self.username}>"
+        return f"<User {self.id}|{self.username}>"
     
     def save(self):
         db.session.add(self)
