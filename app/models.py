@@ -9,6 +9,9 @@ class User(db.Model):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String)
     date_created = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    tasks = db.relationship('Task', back_populates='creator')
+    token = db.Column(db.String, index=True, unique=True)
+    token_expiration = db.Column(db.DateTime(timezone=True))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -46,6 +49,7 @@ class Task(db.Model):
     complete = db.Column(db.Boolean, nullable=False, default=False)
     created_at =db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     due_date = db.Column(db.DateTime)
+    creator = db.relationship('User', back_populates='tasks')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
