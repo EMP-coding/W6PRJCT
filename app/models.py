@@ -40,11 +40,11 @@ class User(db.Model):
     def get_token(self):
         now = datetime.now(timezone.utc)
         if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(minutes=1):
-            return self.token 
-        self.token = secrets.token_hex(16) 
+            return {"token": self.token, "tokenExpiration": self.token_expiration.isoformat()}
+        self.token = secrets.token_hex(16)
         self.token_expiration = now + timedelta(hours=1)
         self.save()
-        return {"token": self.token, "tokenExpiration": self.token_expiration}
+        return {"token": self.token, "tokenExpiration": self.token_expiration.isoformat()}
         
     def find_by_token(token):
         return User.query.filter_by(token=token).filter(User.token_expiration > datetime.now(timezone.utc)).first()
