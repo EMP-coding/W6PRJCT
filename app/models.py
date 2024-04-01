@@ -1,5 +1,6 @@
+import secrets
 from . import db 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -9,7 +10,7 @@ class User(db.Model):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String)
     date_created = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    tasks = db.relationship('Task', back_populates='creator')
+    tasks = db.relationship('Task', backref='user')
     token = db.Column(db.String, index=True, unique=True)
     token_expiration = db.Column(db.DateTime(timezone=True))
 
@@ -35,6 +36,19 @@ class User(db.Model):
             "email": self.email,
             "dateCreated": self.date_created
         }    
+    
+    def get_token(self):
+        now = datetime.now(timezone.utc)
+        if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(minutes=1):
+            return self.token 
+        self.token = secrets.token_hex(16) 
+        self.token_expiration = now + timedelta(hours=1)
+        self.save()
+        return {"token": self.token, "tokenExpiration": self.token_expiration}
+        
+
+
+
     def __repr__(self):
         return f"<User {self.id}|{self.username}>"
     
@@ -49,7 +63,7 @@ class Task(db.Model):
     complete = db.Column(db.Boolean, nullable=False, default=False)
     created_at =db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     due_date = db.Column(db.DateTime)
-    creator = db.relationship('User', back_populates='tasks')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

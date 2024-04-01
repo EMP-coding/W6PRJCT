@@ -1,6 +1,7 @@
-from flask import request, render_template
+from flask import request, render_template, flash, redirect, url_for
 from app import app, db 
 from app.models import Task, User
+from .auth import basic_auth, token_auth
 
 
 import datetime 
@@ -37,33 +38,39 @@ def create_user():
 
     return new_user.to_dict(), 201
     
+@app.route('/token')
+@basic_auth.login_required
+def get_token():
+    user = basic_auth.current_user()
+    return user.get_token()
+
 
 @app.route('/create_user', methods=['POST'])
 def create_user_from_form():
-    # Retrieve form data from request
     if not request.form:
-        return {'error': 'Your submission must be of form type'}, 400
-    data = request.form
-    required_fields = ['firstName', 'username', 'email', 'password']
-    missing_fields = []
-    for field in required_fields:
-        if field not in data:
-            missing_fields.append(field)
-    if missing_fields:
-        return {'error': f"{','.join(missing_fields)} cannot be left empty"}, 400
-    
+        flash('Your submission must be in form data', 'error')
+        return redirect(url_for('index'))
+
     first_name = request.form.get('firstName')
     last_name = request.form.get('lastName')
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
-    check_users = db.session.execute(db.select(User).where( (User.username == username) | (User.email == email) )).scalars().all()
-    if check_users:
-        return {'error': "A user with that username and/or email already exists"}, 400
-    
-    new_user = User(first_name=first_name, last_name=last_name,  username=username, email=email, password=password)
 
-    return new_user.to_dict(), 201
+    missing_fields = [field for field in ['firstName', 'lastName', 'username', 'email', 'password'] if not request.form.get(field)]
+    if missing_fields:
+        flash(f"{' '.join(missing_fields)} must be in the request body", 'error')
+        return redirect(url_for('index'))
+
+    check_users = db.session.execute(select(User).where((User.username == username) | (User.email == email))).scalars().all()
+    if check_users:
+        flash("A user with that username and/or email already exists", 'error')
+        return redirect(url_for('index'))
+
+    
+    new_user = User(first_name=first_name, last_name=last_name, username=username, email=email, password=password)
+    flash('User created successfully', 'success')
+    return redirect(url_for('index'))
 
 # Task Routes
 @app.route('/')
@@ -113,6 +120,7 @@ def get_task(task_id):
 # Create Task 
 
 @app.route('/tasks', methods=['POST'])
+@token_auth.login_required
 def create_task():
     if not request.is_json:
         return {'error': 'Your Task submission must be of json type'}, 400
