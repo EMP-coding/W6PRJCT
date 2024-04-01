@@ -88,3 +88,11 @@ class Task(db.Model):
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S')
             
         }
+    
+    def update(self, **kwargs):
+        allowed_fields = {'title', 'description'}
+
+        for key, value in kwargs.items():
+            if key in allowed_fields:
+                setattr(self, key, value)
+        self.save()    
