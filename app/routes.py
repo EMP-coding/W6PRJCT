@@ -1,12 +1,11 @@
 from flask import request, render_template, flash, redirect, url_for
 from app import app, db 
-from app.models import Task, User
+from app.models import Task, User, check_password_hash
 from .auth import basic_auth, token_auth
+from datetime import datetime 
+from flask import session
 
 
-import datetime 
-current_time = datetime.datetime.now()
-formatted_time = current_time.strftime('%Y-%m-%dT%H:%M:%S')
 
 # User Routes
 
@@ -72,6 +71,34 @@ def create_user_from_form():
     flash('User created successfully', 'success')
     return redirect(url_for('index'))
 
+@app.route('/users/<int:user_id>', methods=['PUT'])
+@token_auth.login_required
+def update_user(user_id):
+    user = token_auth.current_user()
+    if user.id != user_id:
+        return {'error': 'Unauthorized'}, 401  
+    
+    data = request.json
+    if 'username' in data:
+        user.username = data['username']
+    if 'email' in data:
+        user.email = data['email']
+    if 'password' in data:
+        user.set_password(data['password'])
+    db.session.commit()
+    return {'message': 'User updated successfully'}, 200
+
+@app.route('/users/<int:user_id>', methods=['DELETE'])
+@token_auth.login_required
+def delete_user(user_id):
+    user = token_auth.current_user()
+    if user.id != user_id:
+        return {'error': 'Unauthorized'}, 401  
+    
+    db.session.delete(user)
+    db.session.commit()
+    return {'message': 'User deleted successfully'}, 200
+
 # Task Routes
 @app.route('/')
 def index():
@@ -82,32 +109,18 @@ def index():
 # Rout to return all tasks 
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
-    # Construct a select statement to select all tasks
     select_stmt = db.select(Task)
-
-    # Check if there is a search query parameter
     search = request.args.get('search')
     if search:
-        # Modify the select statement to filter tasks by title
         select_stmt = select_stmt.where(Task.title.ilike(f"%{search}%"))
-
     completed = request.args.get('completed')
     if completed:
-        # Convert the completed parameter to a boolean
         completed = completed.lower() == 'true'
-        # Modify the select statement to filter tasks by completion status
         select_stmt = select_stmt.where(Task.complete == completed)
-
-    # Execute the select statement
     tasks = db.session.execute(select_stmt)
-
-    # Extract individual rows and convert each task to a dictionary
     task_dicts = [task.to_dict() for task in tasks.scalars().all()]
-
-    # Return the list of task dictionaries
     return render_template('tasks.html', tasks=task_dicts)
 
-# Rout to return task by id
 
 @app.route('/tasks/<int:task_id>')
 def get_task(task_id):
@@ -164,4 +177,86 @@ def complete_task(task_id):
     db.session.commit()
     
     return task.to_dict(), 200 
+#Update Task
+@app.route('/tasks/<int:task_id>', methods=['PUT'])
+@token_auth.login_required
+def update_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    user = token_auth.current_user()
+    if task.user_id != user.id:
+        return {'error': 'Unauthorized'}, 401  
+    
+    data = request.json
+    if 'title' in data:
+        task.title = data['title']
+    if 'description' in data:
+        task.description = data['description']
+    if 'completed' in data:
+        task.completed = data['completed']
+    if 'due_date' in data:
+        task.due_date = datetime.fromisoformat(data['due_date'])
+    db.session.commit()
+    return {'message': 'Task updated successfully'}, 200
 
+@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+@token_auth.login_required
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    user = token_auth.current_user()
+    if task.user_id != user.id:
+        return {'error': 'Unauthorized'}, 401  
+    
+    db.session.delete(task)
+    db.session.commit()
+    return {'message': 'Task deleted successfully'}, 200
+
+@app.route('/create_task', methods=['POST'])
+def create_task_from_form():
+    if 'token' not in session:
+        flash('You must be logged in to create a task.', 'error')
+        return redirect(url_for('index'))
+    token = session['token']
+    user = User.find_by_token(token)
+    if not user:
+        flash('Invalid or expired token. Please log in again.', 'error')
+        return redirect(url_for('index'))  
+    title = request.form.get('title')
+    description = request.form.get('description')
+    due_date_str = request.form.get('dueDate')
+    due_date = datetime.strptime(due_date_str, '%Y-%m-%d') if due_date_str else None
+
+    new_task = Task(title=title, description=description, due_date=due_date, user_id=user.id)
+    
+    flash('Task created successfully!', 'success')
+    return redirect(url_for('user_home'))  
+
+# Login 
+
+@app.route('/login', methods=['POST'])
+def login():
+    if 'token' in session:
+        flash('You are already logged in.', 'info')
+        return redirect(url_for('user_home'))
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        session['user_id'] = user.id  
+        session['token'] = user.get_token()['token']
+        return redirect(url_for('user_home'))  
+    else:
+        flash('Invalid username or password.', 'error')
+        return redirect(url_for('index'))  
+
+@app.route('/userhome')
+def user_home():
+    if 'user_id' not in session:
+        return redirect(url_for('index'))
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+    if not user:
+        flash('No user found.', 'error')
+        return redirect(url_for('index'))
+    tasks = Task.query.filter_by(user_id=user.id).all()
+    return render_template('userhome.html', tasks=tasks)

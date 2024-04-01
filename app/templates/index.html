@@ -62,20 +62,8 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#">Contact</a>
                     </li>
-                    <!-- Commented out dropdown menu as per your request
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Dropdown
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="#">About</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#">Contact Info</a></li>
-                        </ul>
-                    </li>
-                    -->
                 </ul>
-                <!-- Commented out search form and disabled link as they are not part of the current instructions
+                <!-- Don't need this yet but would be cool to add
                 <li class="nav-item">
                     <a class="nav-link disabled" aria-disabled="true">Disabled</a>
                 </li>
@@ -97,17 +85,17 @@
             <div class="col-md-4 d-flex flex-column justify-content-center align-items-center mx-5">
                 <h6 class="text-center">Already have an account?</h6>
                 <h5 class="text-center">Sign In</h5>
-                <div class="input-group mb-3">
-                    <span class="input-group-text custom-input-label" id="inputGroup-sizing-default">Username:</span>
-                    <input type="text" class="form-control" aria-label="Sizing example input"
-                        aria-describedby="inputGroup-sizing-default">
-                </div>
-                <div class="input-group mb-3">
-                    <span class="input-group-text custom-input-label" id="inputGroup-sizing-default">Password:</span>
-                    <input type="text" class="form-control" aria-label="Sizing example input"
-                        aria-describedby="inputGroup-sizing-default">
-                </div>
-                <button type="button" class="btn btn-filled-outline-signin">Sign In:</button>
+                <form action="/login" method="POST">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text custom-input-label">Username:</span>
+                        <input type="text" class="form-control" name="username" placeholder="Your username" aria-label="Username">
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text custom-input-label">Password:</span>
+                        <input type="password" class="form-control" name="password" placeholder="Your password" aria-label="Password">
+                    </div>
+                    <button type="submit" class="btn btn-filled-outline-signin">Sign In</button>
+                </form>
             </div>
             <div class="col-md-4 d-flex flex-column justify-content-center align-items-center mx-5">
                 <h6 class="text-center">No account? No Problem! It's Free!</h6>

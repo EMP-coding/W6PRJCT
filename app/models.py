@@ -46,8 +46,8 @@ class User(db.Model):
         self.save()
         return {"token": self.token, "tokenExpiration": self.token_expiration}
         
-
-
+    def find_by_token(token):
+        return User.query.filter_by(token=token).filter(User.token_expiration > datetime.now(timezone.utc)).first()
 
     def __repr__(self):
         return f"<User {self.id}|{self.username}>"
